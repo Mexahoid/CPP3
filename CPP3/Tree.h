@@ -2,6 +2,7 @@
 
 template <class NodeType> class Tree
 {
+public:
 	class node
 	{
 		NodeType _data;
@@ -33,6 +34,23 @@ template <class NodeType> class Tree
 			_right = right;
 		}
 
+		void connect_new_data(NodeType data, const bool left)
+		{
+			if (left)
+			{
+				if (_left)
+					throw "Right node is not free.";
+				_left = new node(data);
+			}
+			else
+			{
+
+				if (_right)
+					throw "Right node is not free.";
+				_right = new node(data);
+			}
+		}
+
 		NodeType get_data()
 		{
 			return _data;
@@ -44,14 +62,14 @@ template <class NodeType> class Tree
 		}
 	};
 
-	typedef void(proc(NodeType));
 
 private:
-	node *_head;
+	node * _head;
+	typedef void(proc(NodeType));
 
 	void pre_order(node *nd, proc prc)
 	{
-		if(nd)
+		if (nd)
 		{
 			prc(nd->get_data());
 			pre_order(nd->get_left(), prc);
@@ -81,7 +99,7 @@ private:
 
 	void finalize(node *nd)
 	{
-		if(nd)
+		if (nd)
 		{
 			if (nd->get_left())
 			{
@@ -95,9 +113,22 @@ private:
 		}
 	}
 public:
-	Tree() : _head(0)
+	Tree() : _head(nullptr)
 	{
 
+	}
+
+	bool is_empty()
+	{
+		return !_head;
+	}
+
+	void find_node_and_connect_new(NodeType node_value, NodeType new_data, bool left)
+	{
+		node *nd = find_depth(_head, node_value);
+		if (!nd)
+			throw "No node found with such value.";
+		nd->connect_new_data(new_data, left);
 	}
 
 	void insert(NodeType data)
@@ -115,24 +146,21 @@ public:
 		}
 	}
 
-	NodeType find_depth(node *nd, NodeType value)
+	node *find_depth(node *nd, NodeType value)
 	{
-		if(nd)
+		if (nd)
 		{
-			if(nd->get_data() == value)
+			if (nd->get_data() == value)
 			{
-				return nd->get_data();
+				return nd;
 			}
-			else
-			{
-				find_depth(nd->get_left(), value);
-				find_depth(nd->get_right(), value);
-			}
+			find_depth(nd->get_left(), value);
+			find_depth(nd->get_right(), value);
 		}
 		return nullptr;
 	}
 
-	NodeType find_breadth(node *nd ,NodeType value)
+	NodeType find_breadth(node *nd, NodeType value)
 	{
 		if (true)
 		{
@@ -141,7 +169,7 @@ public:
 		return nullptr;
 	}
 
-	void print(proc prc, const char order = 0)
+	void invoke_procedure(proc prc, const char order = 0)
 	{
 		node *nd = _head;
 		switch (order)
@@ -155,7 +183,7 @@ public:
 		case 2:
 			post_order(nd, prc);
 			break;
-		default: 
+		default:
 			throw "Bad argument 'order': 0 - pre-order, 1 - in-order, 2 - post-order.";
 		}
 	}
