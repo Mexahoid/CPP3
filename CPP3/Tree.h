@@ -1,119 +1,123 @@
 #pragma once
 
-template <class NodeType> class Tree
+
+template <class NodeType> class tree
 {
 public:
+	class tree_exception
+	{
+		friend class tree;
+		enum type
+		{
+			RIGHT_NOT_EMPTY,
+			LEFT_NOT_EMPTY,
+			HEAD_NOT_EMPTY,
+			PROC_BAD_ARGS
+		};
+		type _t;
+
+		explicit tree_exception(const type ex)
+		{
+			_t = ex;
+		}
+	public:
+		const char* get_message() const
+		{
+			switch (_t) {
+			case RIGHT_NOT_EMPTY:
+				return "Cannot add new node to the right. Right is not empty.";
+			case LEFT_NOT_EMPTY:
+				return "Cannot add new node to the left. Left is not empty.";
+			case HEAD_NOT_EMPTY:
+				return "Head is not null. Cannot pass null-pointer.";
+			case PROC_BAD_ARGS:
+				return "Bad argument 'order': 0 - pre-order, 1 - in-order, 2 - post-order.";
+			default:
+				return "Unknown exception.";
+			}
+		}
+	};
 	class node
 	{
+		friend class tree;
 		NodeType _data;
 		node *_left, *_right;
-
-	public:
 		explicit node(NodeType data) : _left(nullptr), _right(nullptr)
 		{
 			_data = data;
 		}
-
-		node *get_left()
-		{
-			return _left;
-		}
-
-		void set_left(node *left)
-		{
-			_left = left;
-		}
-
-		node *get_right()
-		{
-			return _right;
-		}
-
-		void set_right(node *right)
-		{
-			_right = right;
-		}
-
-		void connect_new_data(NodeType data, const bool left)
-		{
-			if (left)
-			{
-				if (_left)
-					throw "Right node is not free.";
-				_left = new node(data);
-			}
-			else
-			{
-
-				if (_right)
-					throw "Right node is not free.";
-				_right = new node(data);
-			}
-		}
-
+	public:
 		NodeType get_data()
 		{
 			return _data;
 		}
-
 		void set_data(NodeType data)
 		{
 			_data = data;
 		}
 	};
-
-
 private:
 	node * _head;
-	typedef void(proc(NodeType));
+	typedef void(proc(node*));
 
 	void pre_order(node *nd, proc prc)
 	{
 		if (nd)
 		{
-			prc(nd->get_data());
-			pre_order(nd->get_left(), prc);
-			pre_order(nd->get_right(), prc);
+			prc(nd);
+			pre_order(nd->_left, prc);
+			pre_order(nd->_right, prc);
 		}
 	}
-
 	void in_order(node *nd, proc prc)
 	{
 		if (nd)
 		{
-			in_order(nd->get_left(), prc);
-			prc(nd->get_data());
-			in_order(nd->get_right(), prc);
+			in_order(nd->_left, prc);
+			prc(nd);
+			in_order(nd->_right, prc);
 		}
 	}
-
 	void post_order(node *nd, proc prc)
 	{
 		if (nd)
 		{
-			post_order(nd->get_left(), prc);
-			post_order(nd->get_right(), prc);
-			prc(nd->get_data());
+			post_order(nd->_left, prc);
+			post_order(nd->_right, prc);
+			prc(nd);
 		}
+	}
+	node *find_depth(node *nd, NodeType value)
+	{
+		if (nd)
+		{
+			if (nd->_data == value)
+			{
+				return nd;
+			}
+			find_depth(nd->_left, value);
+			find_depth(nd->_right, value);
+		}
+		return nullptr;
 	}
 
 	void finalize(node *nd)
 	{
 		if (nd)
 		{
-			if (nd->get_left())
+			if (nd->_left)
 			{
-				finalize(nd->get_left());
+				finalize(nd->_left);
 			}
-			if (nd->get_right())
+			if (nd->_right)
 			{
-				finalize(nd->get_right());
+				finalize(nd->_right);
 			}
 			delete nd;
 		}
 	}
 public:
-	Tree() : _head(nullptr)
+	tree() : _head(nullptr)
 	{
 
 	}
@@ -123,53 +127,40 @@ public:
 		return !_head;
 	}
 
-	void find_node_and_connect_new(NodeType node_value, NodeType new_data, bool left)
+	node* get_node(NodeType value, node* nd = nullptr)
 	{
-		node *nd = find_depth(_head, node_value);
 		if (!nd)
-			throw "No node found with such value.";
-		nd->connect_new_data(new_data, left);
+			return find_depth(_head, value);
+		return find_depth(nd, value);
 	}
 
-	void insert(NodeType data)
+	void insert(NodeType value, const bool left, node *nd = nullptr)
 	{
-		node *nd = new node(data);
-		if (!_head)
-			_head = nd;
+		if (!nd)
+		{
+			if (_head)
+				throw tree_exception(tree_exception::HEAD_NOT_EMPTY);
+			_head = new node(value);
+		}
 		else
 		{
-			if (_head->get_data() > data)
-				nd->set_right(_head);
-			else
-				nd->set_left(_head);
-			_head = nd;
-		}
-	}
-
-	node *find_depth(node *nd, NodeType value)
-	{
-		if (nd)
-		{
-			if (nd->get_data() == value)
+			if (left)
 			{
-				return nd;
+				if (nd->_left)
+					throw tree_exception(tree_exception::LEFT_NOT_EMPTY);
+				nd->_left = new node(value);
 			}
-			find_depth(nd->get_left(), value);
-			find_depth(nd->get_right(), value);
+			else
+			{
+				if (nd->_right)
+					throw tree_exception(tree_exception::RIGHT_NOT_EMPTY);
+				nd->_right = new node(value);
+			}
 		}
-		return nullptr;
 	}
 
-	NodeType find_breadth(node *nd, NodeType value)
-	{
-		if (true)
-		{
-
-		}
-		return nullptr;
-	}
-
-	void invoke_procedure(proc prc, const char order = 0)
+	// Можно как print
+	void invoke_procedure(const proc prc, const char order = 0)
 	{
 		node *nd = _head;
 		switch (order)
@@ -184,11 +175,11 @@ public:
 			post_order(nd, prc);
 			break;
 		default:
-			throw "Bad argument 'order': 0 - pre-order, 1 - in-order, 2 - post-order.";
+			throw tree_exception(tree_exception::PROC_BAD_ARGS);
 		}
 	}
 
-	~Tree()
+	~tree()
 	{
 		finalize(_head);
 	}
