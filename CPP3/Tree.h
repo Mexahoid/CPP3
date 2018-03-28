@@ -40,6 +40,9 @@ public:
 	class node
 	{
 		friend class tree;
+		friend class depth_iterator;
+		friend class width_iterator;
+
 		NodeType _data;
 		node *_left, *_right;
 		explicit node(NodeType data) : _left(nullptr), _right(nullptr)
@@ -56,6 +59,217 @@ public:
 			_data = data;
 		}
 	};
+	class iterator
+	{
+	protected:
+		class items
+		{
+			NodeType _value;
+			items *_next;
+		public:
+			items(NodeType val)
+			{
+				_value = val;
+				_next = nullptr;
+			}
+
+			items *get_next()
+			{
+				return _next;
+			}
+
+			void set_next(items *i)
+			{
+				_next = i;
+			}
+
+			bool next_is_not_null() const
+			{
+				return _next;
+			}
+
+			NodeType get_val()
+			{
+				return _value;
+			}
+		};
+
+		items *_head;
+		items *_ptr;
+
+		iterator() :_head(nullptr)
+		{
+			_ptr = _head;
+		}
+
+		iterator(const iterator &i)
+		{
+			_head = i->_head;
+			_ptr = i->_ptr;
+		}
+
+		void insert(NodeType val)
+		{
+			items *p = _head;
+			items *i = new items(val);
+			if (p)
+			{
+				while (p->next_is_not_null())
+				{
+					p = p->get_next();
+				}
+				p->set_next(i);
+			}
+			else
+			{
+				_head = i;
+				_ptr = _head;
+			}
+		}
+
+	public:
+		bool has_next() const
+		{
+			return _ptr;
+		}
+
+		const iterator operator ++(int)
+		{
+			iterator i(this);
+			_ptr = _ptr->get_next();
+			return i;
+		}
+
+		NodeType get_val()
+		{
+			return _ptr->get_val();
+		}
+
+		virtual ~iterator()
+		{
+			items *p = _head;
+			while (p->next_is_not_null())
+			{
+				items *d = p->get_next();
+				delete p;
+				p = d;
+			}
+		}
+	};
+
+	class width_iterator : public iterator
+	{
+		class queue
+		{
+			struct item
+			{
+				node *_nd;
+				item *_next;
+			};
+
+			item *_head;
+			item *_tail;
+
+		public:
+			queue() : _head(nullptr), _tail(nullptr)
+			{
+
+			}
+
+			bool not_empty() const
+			{
+				return _head;
+			}
+
+			void enqueue(node *nd)
+			{
+				item *i = new item();
+				if (!_head)
+				{
+					i->_next = nullptr;
+					i->_nd = nd;
+					_head = i;
+					_tail = i;
+				}
+				else
+				{
+					i->_next = nullptr;
+					i->_nd = nd;
+					_tail->_next = i;
+					_tail = _tail->_next;
+				}
+			}
+
+			node *dequeue()
+			{
+				node *nd = _head->_nd;
+				if (_head == _tail)
+				{
+					_head = nullptr;
+					_tail = nullptr;
+				}
+				else
+					_head = _head->_next;
+				return nd;
+			}
+
+			~queue()
+			{
+				while (_head)
+				{
+					delete dequeue();
+				}
+			}
+		};
+
+		queue *_q;
+
+		void generate_iterator()
+		{
+			while (_q->not_empty())
+			{
+				node *nd = _q->dequeue();
+				width_iterator::insert(nd->_data);
+				if (nd->_left)
+					_q->enqueue(nd->_left);
+				if (nd->_right)
+					_q->enqueue(nd->_right);
+			}
+		}
+
+	public:
+		width_iterator(node *head)
+		{
+			_q = new queue();
+			_q->enqueue(head);
+			generate_iterator();
+		}
+
+		~width_iterator()
+		{
+			delete _q;
+		}
+	};
+
+	class depth_iterator : public iterator
+	{
+		void generate_iterator(node *nd)
+		{
+			if (nd)
+			{
+				iterator::insert(nd->_data);
+				generate_iterator(nd->_left);
+				generate_iterator(nd->_right);
+			}
+		}
+
+	public:
+		depth_iterator(node *head)
+		{
+			depth_iterator::generate_iterator(head);
+		}
+	};
+
 private:
 	node * _head;
 	typedef void(proc(node*));
@@ -177,6 +391,13 @@ public:
 		default:
 			throw tree_exception(tree_exception::PROC_BAD_ARGS);
 		}
+	}
+
+	iterator *get_iterator(const bool width)
+	{
+		if (width)
+			return new width_iterator(_head);
+		return new depth_iterator(_head);
 	}
 
 	~tree()
