@@ -1,4 +1,5 @@
 #pragma once
+#include <iostream>
 
 
 template <class NodeType> class tree
@@ -97,16 +98,7 @@ public:
 		items *_head;
 		items *_ptr;
 
-		iterator() :_head(nullptr)
-		{
-			_ptr = _head;
-		}
 
-		iterator(const iterator &i)
-		{
-			_head = i->_head;
-			_ptr = i->_ptr;
-		}
 
 		void insert(NodeType val)
 		{
@@ -128,17 +120,48 @@ public:
 		}
 
 	public:
+		iterator(items *head, items *ptr)
+		{
+			_head = head;
+			_ptr = ptr;
+			std::cout << "invoked standard constructor.\n";
+		}
+		iterator() : _head(nullptr)
+		{
+			_ptr = _head;
+			std::cout << "invoked standard constructor.\n";
+		}
+
+		iterator(const iterator& i)
+		{
+			_head = i._head;
+			_ptr = i._ptr;
+		}
 		bool has_next() const
 		{
 			return _ptr;
 		}
 
-		const iterator operator ++(int)
+		//iterator& operator ++()
+		//{
+		//	iterator tmp(*this); // copy
+		//	operator++(); // pre-increment
+		//	return tmp;
+		//}
+		/*iterator& operator++()
 		{
-			iterator i(this);
 			_ptr = _ptr->get_next();
-			return i;
+			std::cout << "Changed pointer\n";
+			return *this;
+		}*/
+
+		virtual iterator operator ++(int)
+		{
+			_ptr = _ptr->get_next();
+			std::cout << "Changed pointer\n";
+			return *this;
 		}
+
 
 		NodeType get_val()
 		{
@@ -238,11 +261,25 @@ public:
 		}
 
 	public:
-		width_iterator(node *head)
+		explicit width_iterator(node *head)
 		{
 			_q = new queue();
 			_q->enqueue(head);
 			generate_iterator();
+		}
+
+		width_iterator(const width_iterator& wi)
+		{
+			_q = wi._q;
+			iterator::_head = iterator(wi)._head;
+			iterator::_ptr = iterator(wi)._ptr;
+		}
+		iterator operator ++(int) override
+		{
+			iterator::_ptr = iterator::_ptr->get_next();
+			iterator iter = iterator(iterator::_head, iterator::_ptr);
+			std::cout << "Changed pointer\n";
+			return iter;
 		}
 
 		~width_iterator()
@@ -273,8 +310,9 @@ public:
 private:
 	node * _head;
 	typedef void(proc(node*));
+	iterator *_iter;
 
-	void pre_order(node *nd, proc prc)
+	void pre_order(node *nd, const proc prc)
 	{
 		if (nd)
 		{
@@ -283,7 +321,7 @@ private:
 			pre_order(nd->_right, prc);
 		}
 	}
-	void in_order(node *nd, proc prc)
+	void in_order(node *nd, const proc prc)
 	{
 		if (nd)
 		{
@@ -292,7 +330,7 @@ private:
 			in_order(nd->_right, prc);
 		}
 	}
-	void post_order(node *nd, proc prc)
+	void post_order(node *nd, const proc prc)
 	{
 		if (nd)
 		{
@@ -331,9 +369,9 @@ private:
 		}
 	}
 public:
+
 	tree() : _head(nullptr)
 	{
-
 	}
 
 	bool is_empty()
@@ -393,15 +431,32 @@ public:
 		}
 	}
 
-	iterator *get_iterator(const bool width)
+	iterator* get_iterator(const bool width)
 	{
 		if (width)
-			return new width_iterator(_head);
-		return new depth_iterator(_head);
+		{
+			if (_iter)
+			{
+				delete _iter;
+				_iter = nullptr;
+			}
+			_iter = new width_iterator(_head);
+		}
+		else
+		{
+			if (_iter)
+			{
+				delete _iter;
+				_iter = nullptr;
+			}
+			_iter = new depth_iterator(_head);
+		}
+		return _iter;
 	}
 
 	~tree()
 	{
 		finalize(_head);
+		delete _iter;
 	}
 };
