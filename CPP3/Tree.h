@@ -1,5 +1,4 @@
 #pragma once
-#include <iostream>
 
 
 template <class NodeType> class tree
@@ -74,6 +73,12 @@ public:
 				_next = nullptr;
 			}
 
+			items(const items& i)
+			{
+				_value = i._value;
+				_next = i._next;
+			}
+
 			items *get_next()
 			{
 				return _next;
@@ -94,12 +99,8 @@ public:
 				return _value;
 			}
 		};
-
 		items *_head;
 		items *_ptr;
-
-
-
 		void insert(NodeType val)
 		{
 			items *p = _head;
@@ -124,12 +125,11 @@ public:
 		{
 			_head = head;
 			_ptr = ptr;
-			std::cout << "invoked standard constructor.\n";
 		}
+
 		iterator() : _head(nullptr)
 		{
 			_ptr = _head;
-			std::cout << "invoked standard constructor.\n";
 		}
 
 		iterator(const iterator& i)
@@ -137,28 +137,31 @@ public:
 			_head = i._head;
 			_ptr = i._ptr;
 		}
+
 		bool has_next() const
 		{
 			return _ptr;
 		}
 
-		//iterator& operator ++()
-		//{
-		//	iterator tmp(*this); // copy
-		//	operator++(); // pre-increment
-		//	return tmp;
-		//}
-		/*iterator& operator++()
-		{
-			_ptr = _ptr->get_next();
-			std::cout << "Changed pointer\n";
-			return *this;
-		}*/
 
 		virtual iterator operator ++(int)
 		{
 			_ptr = _ptr->get_next();
-			std::cout << "Changed pointer\n";
+			if(!_ptr)
+			{
+				items *p = _head;
+				if (p)
+				{
+					while (p->next_is_not_null())
+					{
+						items *d = p->get_next();
+						delete p;
+						p = d;
+					}
+				}
+				_head = nullptr;
+			}
+
 			return *this;
 		}
 
@@ -170,13 +173,7 @@ public:
 
 		virtual ~iterator()
 		{
-			items *p = _head;
-			while (p->next_is_not_null())
-			{
-				items *d = p->get_next();
-				delete p;
-				p = d;
-			}
+			
 		}
 	};
 
@@ -244,7 +241,6 @@ public:
 				}
 			}
 		};
-
 		queue *_q;
 
 		void generate_iterator()
@@ -268,18 +264,11 @@ public:
 			generate_iterator();
 		}
 
-		width_iterator(const width_iterator& wi)
+		width_iterator(const width_iterator* wi)
 		{
-			_q = wi._q;
-			iterator::_head = iterator(wi)._head;
-			iterator::_ptr = iterator(wi)._ptr;
-		}
-		iterator operator ++(int) override
-		{
-			iterator::_ptr = iterator::_ptr->get_next();
-			iterator iter = iterator(iterator::_head, iterator::_ptr);
-			std::cout << "Changed pointer\n";
-			return iter;
+			_q = wi->_q;
+			iterator::_head = wi->_head;
+			iterator::_ptr = wi->_ptr;
 		}
 
 		~width_iterator()
@@ -310,7 +299,6 @@ public:
 private:
 	node * _head;
 	typedef void(proc(node*));
-	iterator *_iter;
 
 	void pre_order(node *nd, const proc prc)
 	{
@@ -431,32 +419,15 @@ public:
 		}
 	}
 
-	iterator* get_iterator(const bool width)
+	iterator get_iterator(const bool width)
 	{
 		if (width)
-		{
-			if (_iter)
-			{
-				delete _iter;
-				_iter = nullptr;
-			}
-			_iter = new width_iterator(_head);
-		}
-		else
-		{
-			if (_iter)
-			{
-				delete _iter;
-				_iter = nullptr;
-			}
-			_iter = new depth_iterator(_head);
-		}
-		return _iter;
+			return width_iterator(_head);
+		return depth_iterator(_head);
 	}
 
 	~tree()
 	{
 		finalize(_head);
-		delete _iter;
 	}
 };
