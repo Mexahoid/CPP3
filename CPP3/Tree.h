@@ -134,8 +134,31 @@ public:
 
 		iterator(const iterator& i)
 		{
-			_head = i._head;
-			_ptr = i._ptr;
+			if (i._head)
+			{
+				_head = new items(i._head->get_val());
+				items *it = i._head->get_next();
+				items *nh = _head;
+				while (it)
+				{
+					nh->set_next(new items(it->get_val()));
+					it = it->get_next();
+					nh = nh->get_next();
+				}
+			}
+
+			if (i._ptr)
+			{
+				_ptr = new items(i._ptr->get_val());
+				items *it = i._ptr->get_next();
+				items *nh = _ptr;
+				while (it)
+				{
+					nh->set_next(new items(it->get_val()));
+					it = it->get_next();
+					nh = nh->get_next();
+				}
+			}
 		}
 
 		bool has_next() const
@@ -146,23 +169,11 @@ public:
 
 		virtual iterator operator ++(int)
 		{
-			_ptr = _ptr->get_next();
-			if(!_ptr)
-			{
-				items *p = _head;
-				if (p)
-				{
-					while (p->next_is_not_null())
-					{
-						items *d = p->get_next();
-						delete p;
-						p = d;
-					}
-				}
-				_head = nullptr;
-			}
+			iterator tmp(*this);
 
-			return *this;
+			_ptr = _ptr->get_next();
+
+			return tmp;
 		}
 
 
@@ -173,7 +184,17 @@ public:
 
 		virtual ~iterator()
 		{
-			
+			items *p = _head;
+			if (p)
+			{
+				while (p->next_is_not_null())
+				{
+					items * d = p->get_next();
+					delete p;
+					p = d;
+				}
+			}
+			_head = nullptr;
 		}
 	};
 
@@ -241,39 +262,32 @@ public:
 				}
 			}
 		};
-		queue *_q;
 
-		void generate_iterator()
+		void generate_iterator(node *head)
 		{
-			while (_q->not_empty())
+			queue _q = queue();
+			_q.enqueue(head);
+			while (_q.not_empty())
 			{
-				node *nd = _q->dequeue();
+				node *nd = _q.dequeue();
 				width_iterator::insert(nd->_data);
 				if (nd->_left)
-					_q->enqueue(nd->_left);
+					_q.enqueue(nd->_left);
 				if (nd->_right)
-					_q->enqueue(nd->_right);
+					_q.enqueue(nd->_right);
 			}
 		}
 
 	public:
 		explicit width_iterator(node *head)
 		{
-			_q = new queue();
-			_q->enqueue(head);
-			generate_iterator();
+			generate_iterator(head);
 		}
 
-		width_iterator(const width_iterator* wi)
+		width_iterator(const width_iterator& wi)
 		{
-			_q = wi->_q;
-			iterator::_head = wi->_head;
-			iterator::_ptr = wi->_ptr;
-		}
-
-		~width_iterator()
-		{
-			delete _q;
+			iterator::_head = wi._head;
+			iterator::_ptr = wi._ptr;
 		}
 	};
 
@@ -419,13 +433,15 @@ public:
 		}
 	}
 
-	iterator get_iterator(const bool width)
+	width_iterator width()
 	{
-		if (width)
-			return width_iterator(_head);
-		return depth_iterator(_head);
+		return width_iterator(_head);
 	}
 
+	depth_iterator depth()
+	{
+		return depth_iterator(_head);
+	}
 	~tree()
 	{
 		finalize(_head);
